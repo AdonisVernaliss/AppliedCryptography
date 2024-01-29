@@ -117,10 +117,16 @@ online_users = set()
 MAX_MESSAGES_COUNT = 150
 
 def hex2bin(s):
-   return bin(int(s, 16))[2:].zfill(len(s) * 4)
+    if not s:
+        return ""  # Return an empty string if s is empty
+    return bin(int(s, 16))[2:].zfill(len(s) * 4)
+
 
 def bin2hex(s):
+    if not s:
+        return ""  # Return an empty string if s is empty
     return hex(int(s, 2))[2:]
+
 
 def bin2dec(binary):
     return int(str(binary), 2)
@@ -208,16 +214,27 @@ async def main():
 
     while True:
         data = await input_group("| Internet Relay Chat |", [
+            file_upload(accept='.txt,.pdf,.doc', name='file', help_text='Choose a file (txt, pdf, doc)'),
             input(placeholder="...", name="msg"),
             actions(name="cmd", buttons=["Send", {'label': "Log out", 'type': 'cancel'}])
-        ], validate=lambda m: ('msg', "Enter the message") if m["cmd"] == "Send" and not m['msg'] else None)
+        ], validate=lambda m: ('msg', "Enter the message") if m["cmd"] == "Send" and not m['msg'] and not m['file'] else None)
 
         if data is None:
             break
 
-        encrypted_msg = bin2hex(encrypt(data['msg'].encode().hex(), rkb, rk))
-        msg_box.append(put_markdown(f"`{nickname}` (Encrypted): {encrypted_msg} ({data['msg']})"))
-        chat_msgs.append((nickname, encrypted_msg))
+        # Process file if uploaded
+        file_content = ""
+        if 'file' in data and data['file']:
+            file_content = data['file']['content'].decode('latin-1')
+            encrypted_file = bin2hex(encrypt(file_content.encode().hex(), rkb, rk))
+            msg_box.append(put_markdown(f"`{nickname}` (Encrypted File): {encrypted_file}"))
+            chat_msgs.append((nickname, encrypted_file))
+
+        # Process text message if provided
+        if 'msg' in data:
+            encrypted_msg = bin2hex(encrypt(data['msg'].encode().hex(), rkb, rk))
+            msg_box.append(put_markdown(f"`{nickname}` (Encrypted): {encrypted_msg} ({data['msg']})"))
+            chat_msgs.append((nickname, encrypted_msg))
 
     refresh_task.close()
 
