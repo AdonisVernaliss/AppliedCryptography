@@ -207,7 +207,7 @@ async def main():
     refresh_task = run_async(refresh_msg(nickname, msg_box))
 
     while True:
-        data = await input_group("| Internet Relay Chat QWERTY - # Irssi & BitchX sucks |", [
+        data = await input_group("| Internet Relay Chat |", [
             input(placeholder="...", name="msg"),
             actions(name="cmd", buttons=["Send", {'label': "Log out", 'type': 'cancel'}])
         ], validate=lambda m: ('msg', "Enter the message") if m["cmd"] == "Send" and not m['msg'] else None)
