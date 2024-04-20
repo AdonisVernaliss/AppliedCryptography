@@ -14,8 +14,8 @@ p = 281
 q = 311
 n = p * q  # RSA Modulus
 r = (p - 1) * (q - 1)  # Euler's Totient
-
 e = 65537  # Public exponent
+
 keys = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -97,7 +97,9 @@ def sha256(data):
     for block in get_blocks(bin_str):
         states = compress(block, states)
     return ''.join(format(state, '08x') for state in states)
-# Function to find modular inverse
+
+########################################################################################################################################
+
 def find_closed_exponent(e, r):
     d, d1 = 0, 1
     r1 = r
@@ -153,7 +155,14 @@ async def main():
             encrypted_msg = encrypt((e, n), message)
             hash_encrypted_msg = sha256(str(encrypted_msg))
             msg_box.append(put_markdown(f"`{nickname}` (Encrypted): {encrypted_msg} \n(SHA-256 Hash): {hash_encrypted_msg}"))
-            chat_msgs.append((nickname, encrypted_msg))
+            chat_msgs.append((nickname, encrypted_msg, hash_encrypted_msg))
+        if 'file' in data and data['file']:
+            file_content = data['file']['content'].decode('latin-1')
+            encrypted_file_content = encrypt((e, n), file_content)
+            hash_encrypted_file = sha256(str(encrypted_file_content))
+            msg_box.append(put_markdown(f"`{nickname}` (Encrypted file): {encrypted_file_content} \n(SHA-256 Hash):{hash_encrypted_file}\n "
+                                        f"[file: {data['file']['filename']} ({len(data['file']['content'])} bytes)]"))
+            chat_msgs.append((nickname, encrypted_file_content, hash_encrypted_file))
 
     refresh_task.close()
     online_users.remove(nickname)
@@ -175,7 +184,11 @@ async def refresh_msg(nickname, msg_box):
                 if m[0] != nickname:
                     try:
                         decrypted_msg = decrypt((d, n), m[1])
-                        msg_box.append(put_markdown(f"`{m[0]}` (Decrypted): {decrypted_msg}"))
+                        hash_decrypted_msg = sha256(str(m[1]))
+                        if hash_decrypted_msg == m[2]:
+                            msg_box.append(put_markdown("Hashes match " + f"`{m[0]}` (Decrypted): {decrypted_msg}"))
+                        else:
+                            msg_box.append(put_markdown(f"`{m[0]}`: Message integrity compromised"))
                     except TypeError:
                         msg_box.append(put_markdown(f"`{m[0]}`: {m[1]}"))
             last_idx += len(new_msgs)
